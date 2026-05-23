@@ -4,7 +4,7 @@ import MainLayout from '../layouts/MainLayout.vue'
 
 import Dashboard from '../views/Dashboard.vue'
 import Login from '../views/Login.vue'
-import Registro from '../views/Registro.vue'
+import Registro from '../views/Register.vue'
 
 const routes = [
   {
