@@ -43,3 +43,7 @@ __screenshots__/
 
 # Ignorar todas las carpetas __pycache__ en cualquier nivel
 __pycache__/
+
+
+# Ignorar archivos
+estructura.txt
