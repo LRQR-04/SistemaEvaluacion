@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useAuthStore } from '../stores/autenticacion.js'
 import { useRouter } from 'vue-router'
 
-import { LayoutDashboard, BookOpen, Users, Repeat, LogOut } from 'lucide-vue-next'
+import { LayoutDashboard, FileText, BarChart3, Users } from 'lucide-vue-next'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -14,26 +14,26 @@ const menu = computed(() => {
   if (rol.value === 'admin') {
     return [
       { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-      { name: 'Examenes', path: '/examenes', icon: Users },
-      { name: 'Resultados', path: '/resultados', icon: Users },
+      { name: 'Examenes', path: '/examenes', icon: FileText },
+      { name: 'Resultados', path: '/resultados', icon: BarChart3 },
       { name: 'Usuarios', path: '/usuarios', icon: Users },
     ]
   }
 
-  if (rol.value === 'profesor') {
-    return [
-      { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-      { name: 'Examenes', path: '/examenes', icon: Users },
-      { name: 'Resultados', path: '/resultados', icon: Users },
-    ]
-  }
+  // if (rol.value === 'profesor') {
+  //   return [
+  //     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+  //     { name: 'Examenes', path: '/examenes', icon: Users },
+  //     { name: 'Resultados', path: '/resultados', icon: Users },
+  //   ]
+  // }
 
-  if (rol.value === 'estudiantes') {
-    return [
-      { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-      { name: 'Resultados', path: '/resultados', icon: Users },
-    ]
-  }
+  // if (rol.value === 'estudiantes') {
+  //   return [
+  //     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+  //     { name: 'Resultados', path: '/resultados', icon: Users },
+  //   ]
+  // }
 })
 
 const logout = () => {
