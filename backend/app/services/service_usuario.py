@@ -1,12 +1,12 @@
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func, or_
 
 from app.models.usuario import Usuario
 from app.models.estudiante import Estudiante
 from app.models.docente import Docente
 
-from app.schemas.schema_usuario import UsuarioCreate
+from app.schemas.schema_usuario import UsuarioCreate, UsuarioUpdate
 
 from app.core.security import hashear_contrasenia
 
@@ -102,143 +102,318 @@ def registrar_usuario(db: Session, user_data: UsuarioCreate) -> Usuario:
 
 
 # Listar usuarios (paginación + filtros)
-# def obtener_usuarios(
-#     db: Session, search: str = "", status: str = "all", page: int = 1, limit: int = 10
-# ) -> dict:
-#     """
-#     Obtiene una lista de usuarios con filtros y paginación.
-#     """
-#     try:
-#         query = db.query(Usuario)
+def obtener_usuarios(
+    db: Session,
+    page: int = 1,
+    limit: int = 10,
+    nombre: str = "",
+    correo: str = "",
+    rol: str = "",
+    estado: str = "",
+) -> dict:
+    """
+    Obtiene una lista de usuarios con filtros y paginación.
+    """
+    try:
+        query = db.query(Usuario).options(
+            joinedload(Usuario.estudiante),
+            joinedload(Usuario.docente),
+        )
 
-#         # Búsqueda por nombre o email
-#         if search:
-#             query = query.filter(
-#                 or_(
-#                     func.lower(Usuario.nombre).like(f"%{search.lower()}%"),
-#                     func.lower(Usuario.email).like(f"%{search.lower()}%"),
-#                 )
-#             )
+        # Búsqueda por nombre
+        if nombre:
+            nombre = nombre.lower()
+            query = query.filter(
+                or_(
+                    func.lower(Usuario.nombre).like(f"%{nombre}%"),
+                    func.lower(Usuario.apellido_paterno).like(f"%{nombre}%"),
+                    func.lower(Usuario.apellido_materno).like(f"%{nombre}%"),
+                )
+            )
 
-#         # Filtro por estado
-#         if status != "all":
-#             query = query.filter(Usuario.estado == status)
+        # Filtro por correo
+        query = query.filter(func.lower(Usuario.email).like(f"%{correo.lower()}%"))
 
-#         total = query.count()
+        # Filtro por rol
+        if rol:
+            query = query.filter(Usuario.rol == rol)
 
-#         usuarios = (
-#             query.order_by(Usuario.id.desc())
-#             .offset((page - 1) * limit)
-#             .limit(limit)
-#             .all()
-#         )
+        # Filtro por estado
+        if estado:
+            if estado:
+                query = query.filter(Usuario.estado == estado)
 
-#         logger.info(f"Usuarios encontrados: {total}")
-#         return {"data": usuarios, "total": total}
+        total = query.count()
 
-#     except Exception:
-#         logger.error("Error al obtener usuarios", exc_info=True)
-#         raise HTTPException(status_code=500, detail="Error al obtener usuarios")
+        usuarios = (
+            query.order_by(Usuario.id_usuario.desc())
+            .offset((page - 1) * limit)
+            .limit(limit)
+            .all()
+        )
 
+        return {"data": usuarios, "total": total}
 
-# # Actualizar datos del usuario
-# def actualizar_usuario(
-#     db: Session, user_id: int, data: UsuarioUpdate, current_user: Usuario
-# ) -> Usuario:
-#     """
-#     Actualiza los datos de un usuario existente.
-#     """
-#     try:
-#         logger.info(f"Intento de actualización usuario ID={user_id}")
-
-#         usuario = db.query(Usuario).filter(Usuario.id == user_id).first()
-
-#         if not usuario:
-#             logger.warning(f"Usuario no encontrado ID={user_id}")
-#             raise HTTPException(status_code=404, detail="Usuario no encontrado")
-
-#         # El admin no puede editar otros admins
-#         if usuario.rol == "admin" and usuario.id != current_user.id:
-#             logger.warning(f"Intento de editar otro admin | usuario_id={user_id}")
-#             raise HTTPException(
-#                 status_code=403, detail="No es posible editar otro admin"
-#             )
-
-#         # validar email único si se modifica
-#         if data.email and data.email != usuario.email:
-#             existente = (
-#                 db.query(Usuario)
-#                 .filter(func.lower(Usuario.email) == data.email.lower())
-#                 .first()
-#             )
-#             if existente:
-#                 logger.warning(f"Email duplicado en actualización -> {data.email}")
-#                 raise HTTPException(
-#                     status_code=400, detail="El correo ya está registrado"
-#                 )
-
-#             usuario.email = data.email
-
-#         if data.nombre:
-#             usuario.nombre = data.nombre
-
-#         if data.rol:
-#             usuario.rol = data.rol
-
-#         db.commit()
-#         db.refresh(usuario)
-
-#         logger.info(f"Usuario actualizado correctamente ID={usuario.id}")
-#         return usuario
-
-#     except HTTPException as e:
-#         db.rollback()
-#         raise e
-
-#     except Exception:
-#         db.rollback()
-#         logger.error("Error al actualizar usuario", exc_info=True)
-#         raise HTTPException(status_code=500, detail="Error al actualizar usuario")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener usuarios")
 
 
-# # Cambiar estado del usuario
-# def cambiar_estado_usuario(db: Session, user_id: int, current_user: Usuario) -> dict:
-#     """
-#     Cambia el estado de un usuario (activo/suspendido).
-#     """
-#     try:
-#         logger.info(f"Cambio de estado usuario ID={user_id}")
+# obtener estudiantes
+def obtener_estudiantes(
+    db: Session,
+    page: int = 1,
+    limit: int = 10,
+    nombre: str = "",
+    matricula: str = "",
+    grupo: str = "",
+):
+    try:
+        query = (
+            db.query(Estudiante).options(joinedload(Estudiante.usuario)).join(Usuario)
+        )
 
-#         usuario = db.query(Usuario).filter(Usuario.id == user_id).first()
+        # Filtro por nombre
+        if nombre:
+            nombre = nombre.lower()
+            query = query.filter(
+                or_(
+                    func.lower(Usuario.nombre).like(f"%{nombre}%"),
+                    func.lower(Usuario.apellido_paterno).like(f"%{nombre}%"),
+                    func.lower(Usuario.apellido_materno).like(f"%{nombre}%"),
+                )
+            )
 
-#         if not usuario:
-#             logger.warning(f"Usuario no encontrado ID={user_id}")
-#             raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        # Filtro por matricula
+        if matricula:
+            query = query.filter(Estudiante.matricula.like(f"%{matricula}%"))
 
-#         # El admin no puede modificar otros admins
-#         if usuario.rol == "admin" and usuario.id != current_user.id:
-#             logger.warning(f"Intento de modificar otro admin | usuario_id={user_id}")
-#             raise HTTPException(
-#                 status_code=403, detail="No se puede modificar otro admin"
-#             )
+        # Filtro por grupo
+        if grupo:
+            query = query.filter(Estudiante.grupo.like(f"%{grupo}%"))
 
-#         usuario.estado = "suspendido" if usuario.estado == "activo" else "activo"
+        total = query.count()
 
-#         db.commit()
+        estudiantes = (
+            query.order_by(Estudiante.id_estudiante.desc())
+            .offset((page - 1) * limit)
+            .limit(limit)
+            .all()
+        )
 
-#         logger.info(
-#             f"Estado actualizado correctamente ID={usuario.id} -> {usuario.estado}"
-#         )
-#         return {"message": "Estado actualizado correctamente"}
+        return {
+            "data": estudiantes,
+            "total": total,
+        }
 
-#     except HTTPException as e:
-#         db.rollback()
-#         raise e
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Error al obtener estudiantes",
+        )
 
-#     except Exception:
-#         db.rollback()
-#         logger.error("Error al cambiar estado de usuario", exc_info=True)
-#         raise HTTPException(status_code=500, detail="Error al cambiar estado")
+
+# Obtener docentes
+def obtener_docentes(
+    db: Session,
+    page: int = 1,
+    limit: int = 10,
+    nombre: str = "",
+    numero_usuario: str = "",
+):
+    try:
+        query = db.query(Docente).options(joinedload(Docente.usuario)).join(Usuario)
+
+        # Filtro por nombre
+        if nombre:
+            nombre = nombre.lower()
+            query = query.filter(
+                or_(
+                    func.lower(Usuario.nombre).like(f"%{nombre}%"),
+                    func.lower(Usuario.apellido_paterno).like(f"%{nombre}%"),
+                    func.lower(Usuario.apellido_materno).like(f"%{nombre}%"),
+                )
+            )
+
+        # Filtro por numero de usuario
+        if numero_usuario:
+            query = query.filter(Docente.numero_usuario.like(f"%{numero_usuario}%"))
+
+        total = query.count()
+
+        docentes = (
+            query.order_by(Docente.id_docente.desc())
+            .offset((page - 1) * limit)
+            .limit(limit)
+            .all()
+        )
+
+        return {
+            "data": docentes,
+            "total": total,
+        }
+
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Error al obtener docentes",
+        )
+
+
+# Actualizar datos del usuario
+def actualizar_usuario(
+    db: Session,
+    id_usuario: int,
+    data: UsuarioUpdate,
+    current_user: Usuario,
+) -> Usuario:
+    """
+    Actualiza los datos de un usuario existente.
+    """
+    try:
+        usuario = (
+            db.query(Usuario)
+            .options(
+                joinedload(Usuario.estudiante),
+                joinedload(Usuario.docente),
+            )
+            .filter(Usuario.id_usuario == id_usuario)
+            .first()
+        )
+
+        if not usuario:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+        # El admin no puede editar otros admins
+        if usuario.rol == "admin" and usuario.id_usuario != current_user.id_usuario:
+            raise HTTPException(
+                status_code=403, detail="No es posible editar otro admin"
+            )
+
+        # validar email único si se modifica
+        if data.email and data.email != usuario.email:
+            existente = (
+                db.query(Usuario)
+                .filter(func.lower(Usuario.email) == data.email.lower())
+                .first()
+            )
+            if existente:
+                raise HTTPException(
+                    status_code=400, detail="El correo ya está registrado"
+                )
+
+            usuario.email = data.email
+
+        # Datos generales
+        if data.nombre is not None:
+            usuario.nombre = data.nombre
+
+        if data.apellido_paterno is not None:
+            usuario.apellido_paterno = data.apellido_paterno
+
+        if data.apellido_materno is not None:
+            usuario.apellido_materno = data.apellido_materno
+
+        if data.estado is not None:
+            usuario.estado = data.estado
+
+        # Estudiante
+        if usuario.rol == "estudiante" and usuario.estudiante:
+
+            if data.matricula is not None:
+
+                matricula_existente = (
+                    db.query(Estudiante)
+                    .filter(
+                        Estudiante.matricula == data.matricula,
+                        Estudiante.id_estudiante != usuario.estudiante.id_estudiante,
+                    )
+                    .first()
+                )
+
+                if matricula_existente:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="La matrícula ya está registrada",
+                    )
+
+                usuario.estudiante.matricula = data.matricula
+
+            if data.grupo is not None:
+                usuario.estudiante.grupo = data.grupo
+
+        # Docente
+        elif usuario.rol == "docente" and usuario.docente:
+
+            if data.numero_usuario is not None:
+
+                numero_existente = (
+                    db.query(Docente)
+                    .filter(
+                        Docente.numero_usuario == data.numero_usuario,
+                        Docente.id_docente != usuario.docente.id_docente,
+                    )
+                    .first()
+                )
+
+                if numero_existente:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="El número de usuario ya está registrado",
+                    )
+
+                usuario.docente.numero_usuario = data.numero_usuario
+
+            if data.especialidad is not None:
+                usuario.docente.especialidad = data.especialidad
+
+        db.commit()
+        db.refresh(usuario)
+
+        return usuario
+
+    except HTTPException as e:
+        db.rollback()
+        raise e
+
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al actualizar usuario")
+
+
+# Cambiar estado del usuario
+def cambiar_estado_usuario(
+    db: Session,
+    id_usuario: int,
+    current_user: Usuario,
+) -> dict:
+    """
+    Cambia el estado de un usuario (activo/suspendido).
+    """
+    try:
+        usuario = db.query(Usuario).filter(Usuario.id_usuario == id_usuario).first()
+
+        if not usuario:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+        # El admin no puede modificar otros admins
+        if usuario.rol == "admin" and usuario.id_usuario != current_user.id_usuario:
+            raise HTTPException(
+                status_code=403, detail="No se puede modificar otro admin"
+            )
+
+        usuario.estado = "inactivo" if usuario.estado == "activo" else "activo"
+
+        db.commit()
+
+        return {"message": "Estado actualizado correctamente"}
+
+    except HTTPException as e:
+        db.rollback()
+        raise e
+
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al cambiar estado")
 
 
 def obtener_usuario_por_email(db: Session, email: str) -> Usuario | None:
