@@ -67,7 +67,7 @@ class UsuarioUpdate(BaseModel):
 
     rol: Optional[Literal["estudiante", "docente", "admin"]] = None
 
-    estado: Optional[Literal["activo", "suspendido"]] = None
+    estado: Optional[Literal["activo", "inactivo"]] = None
 
     # Estudiante
     matricula: Optional[str] = None
