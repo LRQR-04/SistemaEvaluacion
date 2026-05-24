@@ -2,9 +2,12 @@ import { createRouter, createWebHistory } from 'vue-router'
 import AuthLayout from '../layouts/LayoutAuth.vue'
 import MainLayout from '../layouts/MainLayout.vue'
 
-import Dashboard from '../views/Dashboard.vue'
 import Login from '../views/Login.vue'
 import Registro from '../views/Register.vue'
+
+import Dashboard from '../views/Dashboard.vue'
+import Examenes from '../views/Exams.vue'
+import Usuarios from '../views/Users.vue'
 
 const routes = [
   {
@@ -12,13 +15,24 @@ const routes = [
     component: MainLayout,
     children: [
       { path: '', component: Dashboard, meta: { requiresAuth: true } },
-      // { path: '/libros', component: Libros, meta: { requiresAuth: true } },
-      // {
-      //   path: '/usuarios',
-      //   component: Usuarios,
-      //   meta: { requiresAuth: true, roles: ['admin'] },
-      // },
-      // { path: '/prestamos', component: Prestamos, meta: { requiresAuth: true } },
+      {
+        path: 'usuarios',
+        component: Usuarios,
+        meta: {
+          requiresAuth: true,
+
+          roles: ['admin'],
+        },
+      },
+      {
+        path: 'examenes',
+        component: Examenes,
+        meta: {
+          requiresAuth: true,
+
+          roles: ['admin', 'docente'],
+        },
+      },
     ],
   },
   {
