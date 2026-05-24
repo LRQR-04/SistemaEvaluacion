@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from app.config.database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import routes_autenticacion
+from app.routes import routes_autenticacion, routes_usuario
 
 app = FastAPI(title="Sistema Escolar")
 
@@ -19,6 +19,7 @@ app.add_middleware(
 
 # rutas
 app.include_router(routes_autenticacion.router)
+app.include_router(routes_usuario.router)
 
 
 @app.get("/")
