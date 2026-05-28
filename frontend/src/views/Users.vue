@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import api from '../services/api'
 
 import ModalUsuario from '../components/ModalUsuario.vue'
+import ModalTabla from '../components/ModalTabla.vue'
 import Alerta from '../components/Alerta.vue'
 
 import { useAuthStore } from '../stores/autenticacion.js'
@@ -28,14 +29,32 @@ const filtros = ref({
 })
 
 const modalUsuario = ref(false)
-
 const usuarioSeleccionado = ref(null)
+
+const modalTabla = ref(false)
+
+const modalTitle = ref('')
+const modalSubtitle = ref('')
+
+const modalColumns = ref([])
+const modalRows = ref([])
+
+const modalLoading = ref(false)
 
 const alertMsg = ref('')
 const alertType = ref('success')
 
+onMounted(() => {
+  if (auth.user?.rol === 'docente') {
+    vista.value = 'estudiantes'
+  }
+
+  cargar()
+})
+
 /* Cargar usuarios */
 const endpointActual = computed(() => {
+  if (auth.user?.rol === 'docente') return '/estudiantes'
   if (vista.value === 'estudiantes') return '/estudiantes'
   if (vista.value === 'docentes') return '/docentes'
 
@@ -63,11 +82,9 @@ const cargar = async () => {
     registros.value = res.data.data
     total.value = res.data.total
   } catch (error) {
-    mostrarAlerta('Error al cargar registros', 'error')
+    mostrarAlerta(error, 'error')
   }
 }
-
-onMounted(cargar)
 
 watch(page, cargar)
 
@@ -78,6 +95,10 @@ watch(vista, () => {
 
 /* Cambio de vista */
 const cambiarVista = (tipo) => {
+  if (auth.user?.rol === 'docente' && tipo !== 'estudiantes') {
+    return
+  }
+
   vista.value = tipo
 
   filtros.value = {
@@ -119,9 +140,7 @@ const toggleEstado = async (e, usuario) => {
 
   if (usuario.rol === 'admin' && usuario.id_usuario !== auth.user.user_id) {
     e.target.checked = !nuevoEstado
-
     mostrarAlerta('No puedes modificar otro administrador', 'error')
-
     return
   }
 
@@ -147,12 +166,95 @@ const toggleEstado = async (e, usuario) => {
 }
 
 /* Navegación */
-const verHistorial = (estudiante) => {
-  // router.push(`/historial/${estudiante.id_estudiante}`)
+const verHistorial = async (estudiante) => {
+  modalLoading.value = true
+  modalTabla.value = true
+
+  modalTitle.value = 'Historial académico'
+
+  modalSubtitle.value = estudiante.usuario.nombre + ' ' + estudiante.usuario.apellido_paterno
+
+  modalColumns.value = [
+    {
+      label: 'Examen',
+      key: 'nombre_examen',
+    },
+    {
+      label: 'Calificación',
+      key: 'calificacion',
+    },
+    {
+      label: 'Fecha',
+      key: 'fecha_evaluacion',
+    },
+  ]
+
+  try {
+    const res = await api.get(`/resultados/estudiante/${estudiante.id_estudiante}`)
+
+    modalRows.value = res.data.map((r) => ({
+      nombre_examen: r.nombre_examen,
+      calificacion: `${r.calificacion}/10`,
+      fecha_evaluacion: formatearFecha(r.fecha_evaluacion),
+    }))
+  } catch (error) {
+    mostrarAlerta(error.response?.data?.detail || 'Error al cargar historial', 'error')
+  } finally {
+    modalLoading.value = false
+  }
 }
 
-const verExamenes = (docente) => {
-  // router.push(`/docentes/${docente.id_docente}/examenes`)
+const verExamenes = async (docente) => {
+  modalLoading.value = true
+  modalTabla.value = true
+
+  modalTitle.value = 'Exámenes del docente'
+
+  modalSubtitle.value = docente.usuario.nombre + ' ' + docente.usuario.apellido_paterno
+
+  modalColumns.value = [
+    {
+      label: 'Examen',
+      key: 'nombre_examen',
+    },
+    {
+      label: 'Fecha',
+      key: 'fecha_aplicacion',
+    },
+    {
+      label: 'Reactivos',
+      key: 'total_reactivos',
+    },
+    {
+      label: 'Estatus',
+      key: 'estatus',
+    },
+  ]
+
+  try {
+    const res = await api.get(`/examenes/docente/${docente.id_docente}`)
+
+    modalRows.value = res.data.map((e) => ({
+      nombre_examen: e.nombre_examen,
+      fecha_aplicacion: formatearFecha(e.fecha_aplicacion),
+      total_reactivos: e.total_reactivos,
+      estatus: e.estatus,
+    }))
+  } catch (error) {
+    mostrarAlerta(error.response?.data?.detail || 'Error al cargar exámenes', 'error')
+  } finally {
+    modalLoading.value = false
+  }
+}
+
+const formatearFecha = (fecha) => {
+  if (!fecha) return ''
+
+  return new Date(fecha).toLocaleDateString('es-MX', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 
 /* Alertas */
@@ -160,7 +262,7 @@ const mostrarAlerta = (msg, type = 'success') => {
   alertMsg.value = msg
   alertType.value = type
 
-  setTimeout(() => (alertMsg.value = ''), 10000)
+  setTimeout(() => (alertMsg.value = ''), 3000)
 }
 
 /* Paginación */
@@ -183,15 +285,31 @@ const handleSuccess = async (msg, type = 'success') => {
 
     <div class="header">
       <div>
-        <h2>Administración de usuarios</h2>
-        <p class="subtitle">Gestiona estudiantes, docentes y usuarios</p>
+        <h2>
+          {{
+            auth.user?.rol === 'docente' ? 'Gestión de estudiantes' : 'Administración de usuarios'
+          }}
+        </h2>
+        <p class="subtitle">
+          {{
+            auth.user?.rol === 'docente'
+              ? 'Consulta la información de los estudiantes'
+              : 'Gestiona estudiantes, docentes y usuarios'
+          }}
+        </p>
       </div>
 
-      <button v-if="vista === 'todos'" class="btn-primary" @click="nuevo">+ Nuevo</button>
+      <button
+        v-if="vista === 'todos' && auth.user?.rol !== 'docente'"
+        class="btn-primary"
+        @click="nuevo"
+      >
+        + Nuevo
+      </button>
     </div>
 
     <!-- Menu superior -->
-    <div class="tabs">
+    <div class="tabs" v-if="auth.user?.rol !== 'docente'">
       <button class="tab" :class="{ active: vista === 'todos' }" @click="cambiarVista('todos')">
         <Users size="16" />
         Todos
@@ -255,7 +373,7 @@ const handleSuccess = async (msg, type = 'success') => {
     <div class="table-container">
       <table>
         <!-- TODOS -->
-        <template v-if="vista === 'todos'">
+        <template v-if="vista === 'todos' && auth.user?.rol !== 'docente'">
           <thead>
             <tr>
               <th>#</th>
@@ -320,11 +438,9 @@ const handleSuccess = async (msg, type = 'success') => {
               <td>{{ index + 1 }}</td>
               <td>
                 {{
-                  estudiante.usuario.nombre +
-                  ' ' +
-                  estudiante.usuario.apellido_paterno +
-                  ' ' +
-                  estudiante.usuario.apellido_materno
+                  estudiante.usuario
+                    ? `${estudiante.usuario.nombre} ${estudiante.usuario.apellido_paterno} ${estudiante.usuario.apellido_materno}`
+                    : 'Sin usuario'
                 }}
               </td>
               <td>
@@ -344,7 +460,7 @@ const handleSuccess = async (msg, type = 'success') => {
         </template>
 
         <!-- DOCENTES -->
-        <template v-if="vista === 'docentes'">
+        <template v-if="vista === 'docentes' && auth.user?.rol !== 'docente'">
           <thead>
             <tr>
               <th>#</th>
@@ -399,6 +515,16 @@ const handleSuccess = async (msg, type = 'success') => {
       :usuario="usuarioSeleccionado"
       @close="modalUsuario = false"
       @success="handleSuccess"
+    />
+
+    <ModalTabla
+      v-if="modalTabla"
+      :title="modalTitle"
+      :subtitle="modalSubtitle"
+      :columns="modalColumns"
+      :rows="modalRows"
+      :loading="modalLoading"
+      @close="modalTabla = false"
     />
   </div>
 </template>
