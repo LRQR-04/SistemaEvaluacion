@@ -149,11 +149,8 @@ Crear un archivo `.env` dentro de `backend/`
 
 ```env
 DATABASE_URL=mysql+pymysql://usuario:password@localhost/sistema_escolar
-
 SECRET_KEY=clave_secreta
-
 ALGORITHM=HS256
-
 ACCESS_TOKEN_EXPIRE_MINUTES=120
 ```
 
@@ -186,7 +183,6 @@ http://localhost:8000/docs
 
 ```bash
 cd frontend
-
 npm install
 ```
 
