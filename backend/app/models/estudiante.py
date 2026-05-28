@@ -12,3 +12,7 @@ class Estudiante(Base):
     grupo = Column(String(30))
 
     usuario = relationship("Usuario", back_populates="estudiante")
+    resultados = relationship(
+        "Resultado",
+        back_populates="estudiante",
+    )
