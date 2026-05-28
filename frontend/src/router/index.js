@@ -8,6 +8,9 @@ import Registro from '../views/Register.vue'
 import Dashboard from '../views/Dashboard.vue'
 import Examenes from '../views/Exams.vue'
 import Usuarios from '../views/Users.vue'
+import Evaluacion from '../views/Evaluacion.vue'
+import ResultadoEvaluacion from '../views/ResultadoEvaluacion.vue'
+import Resultados from '../views/Resultados.vue'
 
 const routes = [
   {
@@ -20,8 +23,7 @@ const routes = [
         component: Usuarios,
         meta: {
           requiresAuth: true,
-
-          roles: ['admin'],
+          roles: ['admin', 'docente'],
         },
       },
       {
@@ -29,8 +31,40 @@ const routes = [
         component: Examenes,
         meta: {
           requiresAuth: true,
-
           roles: ['admin', 'docente'],
+        },
+      },
+      {
+        path: 'evaluacion',
+        component: Evaluacion,
+        meta: {
+          requiresAuth: true,
+          roles: ['docente'],
+        },
+      },
+      {
+        path: 'resultado-evaluacion',
+        name: 'resultado-evaluacion',
+        component: ResultadoEvaluacion,
+        meta: {
+          requiresAuth: true,
+          roles: ['docente'],
+        },
+      },
+      {
+        path: 'resultados',
+        component: Resultados,
+        meta: {
+          requiresAuth: true,
+          roles: ['admin'],
+        },
+      },
+      {
+        path: 'mis-resultados',
+        component: Resultados,
+        meta: {
+          requiresAuth: true,
+          roles: ['estudiante'],
         },
       },
     ],
