@@ -3,7 +3,14 @@ import { computed } from 'vue'
 import { useAuthStore } from '../stores/autenticacion.js'
 import { useRouter } from 'vue-router'
 
-import { LayoutDashboard, FileText, BarChart3, Users } from 'lucide-vue-next'
+import {
+  LayoutDashboard,
+  FileText,
+  BarChart3,
+  Users,
+  LogOut,
+  ClipboardCheck,
+} from 'lucide-vue-next'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -20,20 +27,21 @@ const menu = computed(() => {
     ]
   }
 
-  // if (rol.value === 'profesor') {
-  //   return [
-  //     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-  //     { name: 'Examenes', path: '/examenes', icon: Users },
-  //     { name: 'Resultados', path: '/resultados', icon: Users },
-  //   ]
-  // }
+  if (rol.value === 'docente') {
+    return [
+      { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+      { name: 'Estudiantes', path: '/usuarios', icon: Users },
+      { name: 'Evaluar', path: '/evaluacion', icon: ClipboardCheck },
+      { name: 'Examenes', path: '/examenes', icon: FileText },
+    ]
+  }
 
-  // if (rol.value === 'estudiantes') {
-  //   return [
-  //     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-  //     { name: 'Resultados', path: '/resultados', icon: Users },
-  //   ]
-  // }
+  if (rol.value === 'estudiante') {
+    return [
+      { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+      { name: 'Resultados', path: '/mis-resultados', icon: BarChart3 },
+    ]
+  }
 })
 
 const logout = () => {
