@@ -125,14 +125,14 @@ def obtener_usuarios(
             nombre = nombre.lower()
             query = query.filter(
                 or_(
-                    func.lower(Usuario.nombre).like(f"%{nombre}%"),
-                    func.lower(Usuario.apellido_paterno).like(f"%{nombre}%"),
-                    func.lower(Usuario.apellido_materno).like(f"%{nombre}%"),
+                    func.lower(Usuario.nombre).like(f"{nombre}%"),
+                    func.lower(Usuario.apellido_paterno).like(f"{nombre}%"),
+                    func.lower(Usuario.apellido_materno).like(f"{nombre}%"),
                 )
             )
 
         # Filtro por correo
-        query = query.filter(func.lower(Usuario.email).like(f"%{correo.lower()}%"))
+        query = query.filter(func.lower(Usuario.email).like(f"{correo.lower()}%"))
 
         # Filtro por rol
         if rol:
@@ -177,19 +177,19 @@ def obtener_estudiantes(
             nombre = nombre.lower()
             query = query.filter(
                 or_(
-                    func.lower(Usuario.nombre).like(f"%{nombre}%"),
-                    func.lower(Usuario.apellido_paterno).like(f"%{nombre}%"),
-                    func.lower(Usuario.apellido_materno).like(f"%{nombre}%"),
+                    func.lower(Usuario.nombre).like(f"{nombre}%"),
+                    func.lower(Usuario.apellido_paterno).like(f"{nombre}%"),
+                    func.lower(Usuario.apellido_materno).like(f"{nombre}%"),
                 )
             )
 
         # Filtro por matricula
         if matricula:
-            query = query.filter(Estudiante.matricula.like(f"%{matricula}%"))
+            query = query.filter(Estudiante.matricula.like(f"{matricula}%"))
 
         # Filtro por grupo
         if grupo:
-            query = query.filter(Estudiante.grupo.like(f"%{grupo}%"))
+            query = query.filter(Estudiante.grupo.like(f"{grupo}%"))
 
         total = query.count()
 
@@ -212,6 +212,22 @@ def obtener_estudiantes(
         )
 
 
+def obtener_estudiantes_activos(db: Session):
+    estudiantes = (
+        db.query(
+            Estudiante.id_estudiante,
+            Usuario.nombre,
+            Usuario.apellido_paterno,
+            Usuario.apellido_materno,
+        )
+        .join(Usuario, Usuario.id_usuario == Estudiante.id_usuario)
+        .filter(Usuario.estado == "activo")
+        .all()
+    )
+
+    return estudiantes
+
+
 # Obtener docentes
 def obtener_docentes(
     db: Session,
@@ -228,15 +244,15 @@ def obtener_docentes(
             nombre = nombre.lower()
             query = query.filter(
                 or_(
-                    func.lower(Usuario.nombre).like(f"%{nombre}%"),
-                    func.lower(Usuario.apellido_paterno).like(f"%{nombre}%"),
-                    func.lower(Usuario.apellido_materno).like(f"%{nombre}%"),
+                    func.lower(Usuario.nombre).like(f"{nombre}%"),
+                    func.lower(Usuario.apellido_paterno).like(f"{nombre}%"),
+                    func.lower(Usuario.apellido_materno).like(f"{nombre}%"),
                 )
             )
 
         # Filtro por numero de usuario
         if numero_usuario:
-            query = query.filter(Docente.numero_usuario.like(f"%{numero_usuario}%"))
+            query = query.filter(Docente.numero_usuario.like(f"{numero_usuario}%"))
 
         total = query.count()
 
