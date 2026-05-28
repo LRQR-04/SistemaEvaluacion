@@ -2,7 +2,13 @@ from fastapi import APIRouter, Depends, Query
 
 from sqlalchemy.orm import Session
 
-from app.schemas.schema_usuario import UsuarioCreate, UsuarioResponse, UsuarioUpdate
+from app.schemas.schema_usuario import (
+    EstudianteActivoResponse,
+    EstudiantePaginadoResponse,
+    UsuarioCreate,
+    UsuarioResponse,
+    UsuarioUpdate,
+)
 
 from app.services.service_usuario import (
     registrar_usuario,
@@ -11,13 +17,17 @@ from app.services.service_usuario import (
     obtener_docentes,
     actualizar_usuario,
     cambiar_estado_usuario,
+    obtener_estudiantes_activos,
 )
+
 from app.config.database import get_db
 
 from app.middleware.middleware_roles import require_roles
 from app.middleware.middleware_autenticacion import obtener_usuario_actual
 
 from app.models.usuario import Usuario
+from app.models.docente import Docente
+from app.models.estudiante import Estudiante
 
 router = APIRouter(prefix="", tags=["Usuarios"])
 
@@ -48,7 +58,8 @@ def listar_usuarios(
 
 @router.get(
     "/estudiantes",
-    dependencies=[Depends(require_roles("admin"))],
+    response_model=EstudiantePaginadoResponse,
+    dependencies=[Depends(require_roles("admin", "docente"))],
 )
 def listar_estudiantes(
     page: int = Query(1, ge=1),
@@ -73,6 +84,21 @@ def listar_estudiantes(
 
 
 @router.get(
+    "/estudiantes/activos",
+    response_model=list[EstudianteActivoResponse],
+    dependencies=[Depends(require_roles("admin", "docente"))],
+)
+def listar_estudiantes_activos(
+    db: Session = Depends(get_db),
+):
+    """
+    Lista únicamente estudiantes activos.
+    """
+
+    return obtener_estudiantes_activos(db)
+
+
+@router.get(
     "/docentes",
     dependencies=[Depends(require_roles("admin"))],
 )
@@ -94,6 +120,28 @@ def listar_docentes(
         nombre=nombre,
         numero_usuario=numero_usuario,
     )
+
+
+@router.get("/docentes/usuario/{id_usuario}")
+def obtener_docente_por_usuario(
+    id_usuario: int,
+    db: Session = Depends(get_db),
+):
+    docente = db.query(Docente).filter(Docente.id_usuario == id_usuario).first()
+
+    return docente
+
+
+@router.get("/estudiantes/usuario/{id_usuario}")
+def obtener_estudiante_por_usuario(
+    id_usuario: int,
+    db: Session = Depends(get_db),
+):
+    estudiante = (
+        db.query(Estudiante).filter(Estudiante.id_usuario == id_usuario).first()
+    )
+
+    return estudiante
 
 
 @router.post(
