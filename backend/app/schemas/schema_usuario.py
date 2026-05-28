@@ -100,3 +100,40 @@ class UsuarioResponse(UsuarioBase):
         """
 
         from_attributes = True
+
+
+class EstudianteResponse(BaseModel):
+    """
+    Respuesta completa de estudiante.
+    """
+
+    id_estudiante: int
+    matricula: str
+    grupo: str
+
+    usuario: UsuarioResponse
+
+    class Config:
+        from_attributes = True
+
+
+class EstudiantePaginadoResponse(BaseModel):
+    """
+    Respuesta paginada de estudiantes.
+    """
+
+    data: list[EstudianteResponse]
+    total: int
+
+
+class EstudianteActivoResponse(BaseModel):
+    """
+    Respuesta simplificada
+    para estudiantes activos.
+    """
+
+    id_estudiante: int
+
+    nombre: str
+    apellido_paterno: str
+    apellido_materno: str
